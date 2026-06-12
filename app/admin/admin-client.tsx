@@ -73,7 +73,10 @@ export default function AdminClient() {
     if (res.ok) {
       const { slot } = await res.json();
       setSlots((prev) => {
-        const i = prev.findIndex((x) => x.starts_at === starts_at);
+        const target = new Date(starts_at).getTime();
+        const i = prev.findIndex(
+          (x) => new Date(x.starts_at).getTime() === target
+        );
         if (i === -1) return [...prev, slot];
         const next = [...prev];
         next[i] = slot;
@@ -159,8 +162,10 @@ function SlotsGrid({
 }) {
   const days = useMemo(() => daysFromToday(DAYS_AHEAD), []);
   const slotMap = useMemo(() => {
-    const m = new Map<string, Slot>();
-    for (const s of slots) m.set(s.starts_at, s);
+    // DB starts_at（+00:00表記）と UI の toISOString（.000Z表記）は
+    // 文字列が異なるため、絶対時刻（epoch ms）で照合する。
+    const m = new Map<number, Slot>();
+    for (const s of slots) m.set(new Date(s.starts_at).getTime(), s);
     return m;
   }, [slots]);
 
@@ -197,7 +202,7 @@ function SlotsGrid({
                     <div className="grid grid-cols-4 gap-1 flex-1">
                       {quarters.map((d) => {
                         const iso = d.toISOString();
-                        const existing = slotMap.get(iso);
+                        const existing = slotMap.get(d.getTime());
                         const past = d.getTime() < now.getTime();
                         const status = existing?.status ?? "closed";
                         const locked =
