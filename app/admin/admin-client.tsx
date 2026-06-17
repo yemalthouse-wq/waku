@@ -90,7 +90,17 @@ export default function AdminClient() {
     const res = await fetch("/api/requests/admin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slot_id: slotId }),
+      body: JSON.stringify({ slot_id: slotId, action: "confirm" }),
+    });
+    if (res.ok) load();
+  }
+
+  async function reopenRequest(slotId: string) {
+    // requested -> open に差し戻し（キャンセル/連絡不通の枠を再公開）
+    const res = await fetch("/api/requests/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slot_id: slotId, action: "reopen" }),
     });
     if (res.ok) load();
   }
@@ -124,7 +134,11 @@ export default function AdminClient() {
       ) : tab === "slots" ? (
         <SlotsGrid slots={slots} onToggle={toggleSlot} savingKey={savingKey} />
       ) : (
-        <RequestsList requests={requests} onConfirm={confirmRequest} />
+        <RequestsList
+          requests={requests}
+          onConfirm={confirmRequest}
+          onReopen={reopenRequest}
+        />
       )}
     </main>
   );
@@ -273,9 +287,11 @@ function LegendItem({ swatch, label }: { swatch: string; label: string }) {
 function RequestsList({
   requests,
   onConfirm,
+  onReopen,
 }: {
   requests: RequestRow[];
   onConfirm: (slotId: string) => void;
+  onReopen: (slotId: string) => void;
 }) {
   const pending = requests.filter((r) => r.slot?.status === "requested");
   const confirmed = requests.filter((r) => r.slot?.status === "confirmed");
@@ -291,7 +307,12 @@ function RequestsList({
         ) : (
           <div className="space-y-3">
             {pending.map((r) => (
-              <RequestCard key={r.id} req={r} onConfirm={onConfirm} />
+              <RequestCard
+                key={r.id}
+                req={r}
+                onConfirm={onConfirm}
+                onReopen={onReopen}
+              />
             ))}
           </div>
         )}
@@ -318,10 +339,12 @@ function RequestsList({
 function RequestCard({
   req,
   onConfirm,
+  onReopen,
   muted,
 }: {
   req: RequestRow;
   onConfirm?: (slotId: string) => void;
+  onReopen?: (slotId: string) => void;
   muted?: boolean;
 }) {
   if (!req.slot) return null;
@@ -356,13 +379,25 @@ function RequestCard({
           </div>
         </div>
 
-        {onConfirm && req.slot && (
-          <button
-            onClick={() => onConfirm(req.slot!.id)}
-            className="px-6 py-3 bg-ink text-paper text-sm tracking-wider whitespace-nowrap"
-          >
-            確定する
-          </button>
+        {(onConfirm || onReopen) && req.slot && (
+          <div className="flex flex-col gap-2 md:items-end">
+            {onConfirm && (
+              <button
+                onClick={() => onConfirm(req.slot!.id)}
+                className="px-6 py-3 bg-ink text-paper text-sm tracking-wider whitespace-nowrap"
+              >
+                確定する
+              </button>
+            )}
+            {onReopen && (
+              <button
+                onClick={() => onReopen(req.slot!.id)}
+                className="px-6 py-3 border border-ink text-ink text-sm tracking-wider whitespace-nowrap hover:bg-ink hover:text-paper transition-colors"
+              >
+                枠を開け直す
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>
