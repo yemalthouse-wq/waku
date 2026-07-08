@@ -117,6 +117,8 @@ export default function AdminClient() {
         </button>
       </header>
 
+      <SituationAwareness slots={slots} requests={requests} loading={loading} />
+
       <nav className="flex gap-6 mb-12 text-sm">
         <TabButton active={tab === "slots"} onClick={() => setTab("slots")}>
           枠を開放
@@ -141,6 +143,40 @@ export default function AdminClient() {
         />
       )}
     </main>
+  );
+}
+
+// SA Layer: Situation Awareness（見るだけ）
+// Display Layer Only — 読み込み済みの slots / requests を数えて表示するだけ。
+// 取得処理・業務ロジック・強調表示・優先順位付けは持たない。
+function SituationAwareness({
+  slots,
+  requests,
+  loading,
+}: {
+  slots: Slot[];
+  requests: RequestRow[];
+  loading: boolean;
+}) {
+  const slotCount = (status: Slot["status"]) =>
+    slots.filter((s) => s.status === status).length;
+  const pendingRequests = requests.filter(
+    (r) => r.slot?.status === "requested"
+  ).length;
+
+  const v = (n: number) => (loading ? "—" : String(n));
+
+  return (
+    <section className="mb-12 border-b border-line pb-6">
+      <p className="text-muted text-xs tracking-wide mb-3">situation</p>
+      <div className="flex flex-wrap gap-x-6 gap-y-2 font-mono text-xs text-muted">
+        <span>非公開 (closed) {v(slotCount("closed"))}</span>
+        <span>公開中 (open) {v(slotCount("open"))}</span>
+        <span>リクエスト中 (requested) {v(slotCount("requested"))}</span>
+        <span>確定済 (confirmed) {v(slotCount("confirmed"))}</span>
+        <span>確認待ちリクエスト {v(pendingRequests)}</span>
+      </div>
+    </section>
   );
 }
 
